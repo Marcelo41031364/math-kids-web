@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Kids</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background-color: #E0F7FA; text-align: center; padding: 10px; margin: 0; }
+        
+        /* Topo */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #B2EBF2; border-radius: 0 0 15px 15px; margin-bottom: 20px; }
+        .btn-voltar { background-color: #0097A7; color: white; padding: 8px 15px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1rem; }
+        .score { font-size: 1.5rem; color: #F57F17; font-weight: bold; }
+        
+        /* Pergunta */
+        .pergunta { font-size: 3.5rem; color: #006064; margin: 10px 0; font-weight: bold; }
+        
+        /* Visor */
+        .visor-container { margin-bottom: 15px; }
+        #visor { 
+            font-size: 2.5rem; width: 200px; text-align: center; padding: 10px; 
+            border: 3px solid #006064; border-radius: 10px; background: #FFF; color: #333;
+            pointer-events: none; /* Bloqueia teclado nativo */
+        }
+
+        /* Feedback e Botões de Ação */
+        .feedback-area { min-height: 50px; margin: 10px 0; }
+        .msg-feedback { font-size: 1.5rem; font-weight: bold; display: block; margin-bottom: 10px;}
+        
+        .btn-proxima { 
+            background-color: #00C853; color: white; padding: 15px 30px; 
+            text-decoration: none; font-size: 1.5rem; border-radius: 10px; 
+            font-weight: bold; display: inline-block; box-shadow: 0 4px 0 #009624;
+        }
+
+        /* Botão Ajuda */
+        .btn-ajuda { background-color: #FFF176; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; border-radius: 20px; font-weight: bold; color: #555; font-size: 1rem; box-shadow: 0 3px 0 #F9A825; }
+        .box-ajuda { display: none; background: #FFF9C4; padding: 15px; margin: 10px auto; border-radius: 10px; border: 2px dashed #FBC02D; color: #333; font-size: 1.2rem; max-width: 90%; }
+
+        /* Teclado Numérico - CSS Grid Robusto */
+        .teclado-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+            padding-bottom: 30px;
+        }
+        .teclado-container { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 12px; 
+            width: 100%;
+            max-width: 350px; 
+        }
+        .key { 
+            background-color: white; border: none; 
+            padding: 20px 0; font-size: 2rem; font-weight: bold; color: #37474F;
+            border-radius: 12px; box-shadow: 0 5px 0 #B0BEC5; cursor: pointer;
+            touch-action: manipulation; /* Melhora resposta ao toque */
+        }
+        .key:active { transform: translateY(4px); box-shadow: 0 1px 0 #B0BEC5; }
+        .key-c { background-color: #FFAB91; color: white; box-shadow: 0 5px 0 #D84315; }
+        .key-ok { background-color: #81C784; color: white; box-shadow: 0 5px 0 #2E7D32; }
+
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <a href="/" class="btn-voltar">⬅ Menu</a>
+        <div class="score">⭐ {{ score }}</div>
+    </div>
+
+    <div class="pergunta">
+        {{ num1 }} {{ operador }} {{ num2 }}
+    </div>
+
+    <form id="form-resposta" method="POST" action="/jogo">
+        <div class="visor-container">
+            <input type="text" id="visor" name="resposta" value="" readonly placeholder="?">
+        </div>
+    </form>
+
+    <div class="feedback-area">
+        {% if feedback %}
+            <span class="msg-feedback" style="color: {{ cor_feedback }}">{{ feedback }}</span>
+            
+            {% if acertou %}
+                <!-- Se acertou: Botão Próxima -->
+                <a href="/nova_pergunta" class="btn-proxima">Próxima ➡</a>
+            {% else %}
+                <!-- Se errou: Botão Ajuda aparece -->
+                <button class="btn-ajuda" onclick="toggleAjuda()">🦉 Como resolver?</button>
+            {% endif %}
+
+        {% else %}
+            <!-- Estado normal: Botão Ajuda opcional -->
+            <button class="btn-ajuda" onclick="toggleAjuda()">🦉 Preciso de Ajuda</button>
+        {% endif %}
+        
+        <div id="dica-box" class="box-ajuda">{{ dica_texto }}</div>
+    </div>
+
+    <!-- O Teclado só some se a pessoa ACERTOU. Se errou, continua lá para tentar de novo. -->
+    {% if not acertou %}
+    <div class="teclado-wrapper">
+        <div class="teclado-container">
+            <button type="button" class="key" onclick="addNum('7')">7</button>
+            <button type="button" class="key" onclick="addNum('8')">8</button>
+            <button type="button" class="key" onclick="addNum('9')">9</button>
+            
+            <button type="button" class="key" onclick="addNum('4')">4</button>
+            <button type="button" class="key" onclick="addNum('5')">5</button>
+            <button type="button" class="key" onclick="addNum('6')">6</button>
+            
+            <button type="button" class="key" onclick="addNum('1')">1</button>
+            <button type="button" class="key" onclick="addNum('2')">2</button>
+            <button type="button" class="key" onclick="addNum('3')">3</button>
+            
+            <button type="button" class="key key-c" onclick="limpar()">C</button>
+            <button type="button" class="key" onclick="addNum('0')">0</button>
+            <button type="button" class="key key-ok" onclick="enviar()">OK</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        // Mostra a ajuda automaticamente se o Python disser que errou
+        window.onload = function() {
+            var mostrar = "{{ mostrar_ajuda }}";
+            if (mostrar == "True") {
+                document.getElementById('dica-box').style.display = 'block';
+            }
+        }
+
+        function addNum(n) {
+            let visor = document.getElementById('visor');
+            if (visor.value.length < 4) {
+                visor.value += n;
+            }
+        }
+        function limpar() {
+            document.getElementById('visor').value = '';
+        }
+        function enviar() {
+            let valor = document.getElementById('visor').value;
+            if (valor !== "") {
+                document.getElementById('form-resposta').submit();
+            }
+        }
+        function toggleAjuda() {
+            let box = document.getElementById('dica-box');
+            if (box.style.display === "block") {
+                box.style.display = "none";
+            } else {
+                box.style.display = "block";
+            }
+        }
+    </script>
+</body>
+</html>
