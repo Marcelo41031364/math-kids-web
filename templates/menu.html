@@ -13,7 +13,7 @@
         /* Títulos das Seções */
         .section-title { 
             color: #0277BD; 
-            margin-top: 15px; 
+            margin-top: 20px; 
             margin-bottom: 10px;
             font-size: 1.2rem;
             border-bottom: 2px solid #B3E5FC; 
@@ -21,13 +21,13 @@
             padding: 0 15px; 
         }
 
-        /* CONTAINER DO GRID (A Mágica acontece aqui) */
+        /* CONTAINER DO GRID */
         .grid-container {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* Duas colunas iguais */
-            gap: 10px; /* Espaço entre os botões */
-            max-width: 400px; /* Largura máxima para não esticar demais no PC */
-            margin: 0 auto; /* Centraliza o container */
+            grid-template-columns: 1fr 1fr; /* Duas colunas */
+            gap: 10px;
+            max-width: 400px;
+            margin: 0 auto;
             padding: 0 10px;
         }
 
@@ -36,8 +36,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 15px 5px; 
-            font-size: 1rem; 
+            padding: 10px; 
+            font-size: 0.95rem; 
             color: #37474F; 
             background: white;
             border: none; 
@@ -46,25 +46,21 @@
             font-weight: bold; 
             box-shadow: 0 3px 0px rgba(0,0,0,0.1); 
             transition: transform 0.1s; 
-            height: 50px; /* Altura fixa para ficarem iguais */
+            height: 50px;
         }
         
         .btn:active { transform: translateY(3px); box-shadow: none; }
 
-        /* Botão que ocupa a linha inteira (O último) */
-        .btn-full {
-            grid-column: span 2; /* Ocupa as 2 colunas */
-        }
-        
         /* Cores (Borda Esquerda) */
         .soma { border-left: 8px solid #42A5F5; }
         .sub { border-left: 8px solid #EF5350; }
         .mult { border-left: 8px solid #FFA726; }
         .div { border-left: 8px solid #AB47BC; }
+        .neg { border-left: 8px solid #3F51B5; background-color: #E8EAF6; }
         .todas { border-left: 8px solid #26A69A; background-color: #E0F2F1; }
 
         /* Rodapé */
-        .footer-btns { margin-top: 25px; margin-bottom: 20px; }
+        .footer-btns { margin-top: 30px; margin-bottom: 20px; }
         
         .btn-relatorio { 
             background-color: #FFF59D; 
@@ -98,8 +94,8 @@
         <a href="/iniciar/-" class="btn sub">➖ Subtração</a>
         <a href="/iniciar/*" class="btn mult">✖️ Multiplicação</a>
         <a href="/iniciar//" class="btn div">➗ Divisão</a>
-        <!-- Este botão ocupa a linha toda -->
-        <a href="/iniciar/todas" class="btn todas btn-full">🎲 Tudo Misturado</a>
+        <a href="/iniciar/negativos" class="btn neg">🥶 Negativos</a>
+        <a href="/iniciar/todas" class="btn todas">🎲 Misturado</a>
     </div>
 
     <!-- SEÇÃO 2: MODO FLASHCARDS -->
@@ -110,8 +106,8 @@
         <a href="/iniciar_flashcards/-" class="btn sub">➖ Subtração</a>
         <a href="/iniciar_flashcards/*" class="btn mult">✖️ Tabuada</a>
         <a href="/iniciar_flashcards//" class="btn div">➗ Divisão</a>
-        <!-- Este botão ocupa a linha toda -->
-        <a href="/iniciar_flashcards/todas" class="btn todas btn-full">⚡ Desafio Rápido</a>
+        <a href="/iniciar_flashcards/negativos" class="btn neg">🥶 Negativos</a>
+        <a href="/iniciar_flashcards/todas" class="btn todas">⚡ Rápido</a>
     </div>
 
     <!-- RODAPÉ -->

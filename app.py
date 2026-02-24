@@ -13,37 +13,30 @@ import io
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# --- CONFIGURAÇÃO DO BANCO ---
-#basedir = os.path.abspath(os.path.dirname(__file__))
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'mathkids.db')
-#app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-#db = SQLAlchemy(app)
-
-# --- CONFIGURAÇÃO DO BANCO (HÍBRIDO) ---
+# --- CONFIGURAÇÃO DO BANCO DE DADOS (HÍBRIDO) ---
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Tenta pegar a URL do banco nas variáveis de ambiente (Render)
+# Tenta pegar a URL do banco do Render (PostgreSQL)
 database_url = os.environ.get('DATABASE_URL')
 
-# Correção necessária: O Render entrega 'postgres://' mas o SQLAlchemy exige 'postgresql://'
+# Ajuste necessário para o Render (postgres:// -> postgresql://)
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-# Se tiver URL (no Render), usa Postgres. Se não (no Mac), usa SQLite.
+# Se não tiver URL (estamos no Mac), usa SQLite local
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.join(basedir, 'mathkids.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 # --- CONFIGURAÇÃO DE LOGIN ---
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Se não estiver logado, manda pra cá
-login_manager.login_message = "Por favor, insira seu usuário e senha."
+login_manager.login_view = 'login'
+login_manager.login_message = "Por favor, faça login para acessar essa página."
 
 # --- MODELOS (TABELAS) ---
 
-# Tabela de Alunos (Usuários)
 class Student(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
@@ -56,10 +49,9 @@ class Student(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-# Tabela de Histórico (Agora vinculada ao Aluno)
 class Historico(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id')) # Vínculo
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
     operacao = db.Column(db.String(10))
     conta = db.Column(db.String(50))
     resposta_aluno = db.Column(db.Integer)
@@ -71,15 +63,43 @@ class Historico(db.Model):
 def load_user(user_id):
     return Student.query.get(int(user_id))
 
-# Cria o banco novo
+# Cria o banco de dados se não existir
 with app.app_context():
     db.create_all()
 
-# --- INTELIGÊNCIA ---
+# --- FUNÇÕES AUXILIARES ---
+
+def gerar_opcoes(resposta_certa):
+    """Gera 3 opções para o Flashcard (1 certa + 2 erradas)"""
+    opcoes = {resposta_certa}
+    while len(opcoes) < 3:
+        desvio = random.randint(-5, 5)
+        if desvio != 0:
+            errada = resposta_certa + desvio
+            # Nota: Permitimos números negativos nas opções agora
+            opcoes.add(errada)
+    lista = list(opcoes)
+    random.shuffle(lista)
+    return lista
+
+def gerar_texto_ajuda(n1, n2, op):
+    # Ajuda para Negativos
+    if n1 < 0 or n2 < 0:
+        if op == 'x' or op == '*':
+            return "Regra dos Sinais: Sinais IGUAIS dá POSITIVO (+). Sinais DIFERENTES dá NEGATIVO (-)."
+        elif op == '+' or op == '-':
+            return "Dica da Dívida: Pense em dinheiro. Negativo é dívida, Positivo é dinheiro no bolso."
+
+    # Ajuda Padrão
+    if op == '+': return f"Guarde o número {n1} na cabeça e conte mais {n2} dedos!"
+    if op == '-': return f"Coloque {n1} dedos e abaixe {n2}. Quantos sobraram?"
+    if op == '*': return f"Isso é o mesmo que somar o número {n1}, {n2} vezes."
+    if op == '/': return f"Imagine dividir {n1} balas para {n2} amigos."
+    if op == '÷': return f"Imagine dividir {n1} balas para {n2} amigos."
+    return "Tente contar devagar!"
+
 def analisar_fraquezas_aluno():
-    # Filtra erros APENAS do aluno logado
     erros = Historico.query.filter_by(student_id=current_user.id, acertou=False).all()
-    
     if not erros: return None, None
 
     ops = [e.operacao for e in erros]
@@ -92,31 +112,16 @@ def analisar_fraquezas_aluno():
             if e.operacao == 'x':
                 partes = e.conta.split(' x ')
                 try:
-                    numeros.append(int(partes[0]))
-                    numeros.append(int(partes[1]))
+                    # Remove parenteses se houver para pegar o numero puro
+                    n1 = int(partes[0].replace('(','').replace(')',''))
+                    n2 = int(partes[1].replace('(','').replace(')',''))
+                    numeros.append(n1)
+                    numeros.append(n2)
                 except: pass
         if numeros:
             detalhe = Counter(numeros).most_common(1)[0][0]
 
     return op_mais_errada, detalhe
-
-# --- FUNÇÃO AUXILIAR PARA FLASHCARDS ---
-def gerar_opcoes(resposta_certa):
-    """Gera 3 opções: a certa e duas erradas próximas"""
-    opcoes = {resposta_certa} # Usa um set para evitar duplicatas
-    
-    while len(opcoes) < 3:
-        # Gera um erro entre -5 e +5 (ex: se a resposta é 20, gera 18, 23, etc)
-        desvio = random.randint(-5, 5)
-        if desvio != 0:
-            errada = resposta_certa + desvio
-            # Evita números negativos
-            if errada < 0: errada = 0
-            opcoes.add(errada)
-    
-    lista_opcoes = list(opcoes)
-    random.shuffle(lista_opcoes) # Embaralha para a certa não ficar sempre no mesmo lugar
-    return lista_opcoes
 
 # --- ROTAS DE AUTENTICAÇÃO ---
 
@@ -127,7 +132,6 @@ def register():
         usuario = request.form.get('username')
         senha = request.form.get('password')
 
-        # Verifica se usuário já existe
         if Student.query.filter_by(username=usuario).first():
             flash('Este nome de usuário já existe!')
             return redirect(url_for('register'))
@@ -139,7 +143,6 @@ def register():
         
         login_user(novo_aluno)
         return redirect(url_for('index'))
-    
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -147,7 +150,6 @@ def login():
     if request.method == 'POST':
         usuario = request.form.get('username')
         senha = request.form.get('password')
-        
         aluno = Student.query.filter_by(username=usuario).first()
         
         if aluno and aluno.check_password(senha):
@@ -155,7 +157,6 @@ def login():
             return redirect(url_for('index'))
         else:
             flash('Usuário ou senha incorretos.')
-            
     return render_template('login.html')
 
 @app.route('/logout')
@@ -171,6 +172,8 @@ def logout():
 def index():
     return render_template('menu.html', nome=current_user.name)
 
+# --- MODO CLÁSSICO (DIGITAR) ---
+
 @app.route('/iniciar/<modo>')
 @login_required
 def iniciar(modo):
@@ -182,11 +185,29 @@ def iniciar(modo):
 @login_required
 def nova_pergunta():
     op_modo = session.get('modo', 'todas')
+    
+    # Lógica para Negativos
+    if op_modo == 'negativos':
+        op = random.choice(['+', '-', '*'])
+        faixa = [n for n in range(-9, 10) if n != 0]
+        num1 = random.choice(faixa)
+        num2 = random.choice(faixa)
+        
+        if op == '*': resp = num1 * num2
+        elif op == '-': resp = num1 - num2
+        else: resp = num1 + num2
+
+        session['num1'] = num1
+        session['num2'] = num2
+        session['operador_visual'] = 'x' if op == '*' else op
+        session['resposta_correta'] = resp
+        return redirect(url_for('jogo'))
+
+    # Lógica Padrão
     operadores = ['+', '-', '*', '/']
     op = op_modo if op_modo in ['+', '-', '*', '/'] else random.choice(operadores)
     
     num1, num2, resp = 0, 0, 0
-    
     if op == '/':
         divisor = random.randint(2, 9)
         resp = random.randint(2, 9)
@@ -208,7 +229,6 @@ def nova_pergunta():
 
     session['num1'] = num1
     session['num2'] = num2
-    session['operador_real'] = op
     if op == '/': visual = '÷'
     elif op == '*': visual = 'x'
     else: visual = op
@@ -236,9 +256,8 @@ def jogo():
                 resp_real = session.get('resposta_correta')
                 acertou = (resp_user == resp_real)
 
-                # Salva no Banco VINCULADO AO ALUNO
                 novo = Historico(
-                    student_id=current_user.id, # <--- AQUI ESTÁ A MÁGICA
+                    student_id=current_user.id,
                     operacao=session['operador_visual'],
                     conta=f"{session['num1']} {session['operador_visual']} {session['num2']}",
                     resposta_aluno=resp_user,
@@ -259,13 +278,7 @@ def jogo():
         except:
             pass
     
-    op = session['operador_visual']
-    n1, n2 = session['num1'], session['num2']
-    dica = "Tente contar nos dedos!"
-    if op == '+': dica = f"Comece do {n1} e conte mais {n2}."
-    if op == '-': dica = f"Tenho {n1}, tiro {n2}. Sobra quanto?"
-    if op == 'x': dica = f"Some o número {n1}, {n2} vezes."
-    if op == '÷': dica = f"Divida {n1} balas para {n2} amigos."
+    dica = gerar_texto_ajuda(session['num1'], session['num2'], session['operador_visual'])
 
     return render_template('jogo.html', 
                            num1=session['num1'], 
@@ -278,12 +291,126 @@ def jogo():
                            mostrar_ajuda=mostrar_ajuda,
                            dica_texto=dica)
 
+# --- MODO FLASHCARDS ---
+
+@app.route('/iniciar_flashcards/<modo>')
+@login_required
+def iniciar_flashcards(modo):
+    session['modo'] = modo
+    session['score'] = 0
+    return redirect(url_for('nova_pergunta_flash'))
+
+@app.route('/nova_pergunta_flash')
+@login_required
+def nova_pergunta_flash():
+    op_modo = session.get('modo', 'todas')
+    
+    # Lógica Negativos Flash
+    if op_modo == 'negativos':
+        op = random.choice(['+', '-', '*'])
+        faixa = [n for n in range(-9, 10) if n != 0]
+        num1 = random.choice(faixa)
+        num2 = random.choice(faixa)
+        
+        if op == '*': resp = num1 * num2
+        elif op == '-': resp = num1 - num2
+        else: resp = num1 + num2
+
+        session['num1'] = num1
+        session['num2'] = num2
+        session['operador_visual'] = 'x' if op == '*' else op
+        session['resposta_correta'] = resp
+        session['opcoes_flash'] = gerar_opcoes(resp)
+        return redirect(url_for('jogo_flashcards'))
+
+    # Lógica Padrão Flash
+    operadores = ['+', '-', '*', '/']
+    op = op_modo if op_modo in ['+', '-', '*', '/'] else random.choice(operadores)
+    
+    num1, num2, resp = 0, 0, 0
+    if op == '/':
+        divisor = random.randint(2, 9)
+        resp = random.randint(2, 9)
+        num1 = divisor * resp
+        num2 = divisor
+    elif op == '*':
+        num1 = random.randint(2, 9)
+        num2 = random.randint(2, 9)
+        resp = num1 * num2
+    elif op == '-':
+        num1 = random.randint(1, 20)
+        num2 = random.randint(1, 20)
+        if num1 < num2: num1, num2 = num2, num1
+        resp = num1 - num2
+    else:
+        num1 = random.randint(1, 20)
+        num2 = random.randint(1, 20)
+        resp = num1 + num2
+
+    session['num1'] = num1
+    session['num2'] = num2
+    if op == '/': visual = '÷'
+    elif op == '*': visual = 'x'
+    else: visual = op
+    session['operador_visual'] = visual
+    session['resposta_correta'] = resp
+    session['opcoes_flash'] = gerar_opcoes(resp)
+    
+    return redirect(url_for('jogo_flashcards'))
+
+@app.route('/jogo_flashcards', methods=['GET', 'POST'])
+@login_required
+def jogo_flashcards():
+    if 'opcoes_flash' not in session:
+        return redirect(url_for('nova_pergunta_flash'))
+
+    feedback = None
+    cor_feedback = ""
+    acertou = False
+    
+    if request.method == 'POST':
+        try:
+            resp_user = int(request.form.get('resposta'))
+            resp_real = session.get('resposta_correta')
+            acertou = (resp_user == resp_real)
+
+            novo = Historico(
+                student_id=current_user.id,
+                operacao=session['operador_visual'],
+                conta=f"{session['num1']} {session['operador_visual']} {session['num2']}",
+                resposta_aluno=resp_user,
+                resposta_correta=resp_real,
+                acertou=acertou
+            )
+            db.session.add(novo)
+            db.session.commit()
+
+            if acertou:
+                session['score'] += 1
+                feedback = "ACERTOU! 🌟"
+                cor_feedback = "green"
+            else:
+                feedback = f"Ops! A certa era {resp_real}."
+                cor_feedback = "#D32F2F"
+        except:
+            pass
+
+    return render_template('flashcards.html', 
+                           num1=session['num1'], 
+                           num2=session['num2'], 
+                           operador=session['operador_visual'],
+                           score=session['score'],
+                           opcoes=session['opcoes_flash'],
+                           feedback=feedback,
+                           cor_feedback=cor_feedback,
+                           acertou=acertou)
+
+# --- RELATÓRIOS E PDF ---
+
 @app.route('/relatorio')
 @login_required
 def relatorio():
-    # Filtra apenas o histórico do usuário atual
     historico = Historico.query.filter_by(student_id=current_user.id).order_by(Historico.data.desc()).limit(100).all()
-    
     total = Historico.query.filter_by(student_id=current_user.id).count()
     acertos = Historico.query.filter_by(student_id=current_user.id, acertou=True).count()
     erros = total - acertos
@@ -314,7 +441,7 @@ def baixar_pdf():
     c.setFont("Helvetica-Bold", 20)
     c.drawString(100, 800, "Math Kids - Folha de Treino")
     c.setFont("Helvetica", 12)
-    c.drawString(100, 780, f"Aluno: {current_user.name}") # Nome do aluno no PDF
+    c.drawString(100, 780, f"Aluno: {current_user.name}")
     
     titulo_foco = "Treino Geral"
     if op_fraca == 'x': titulo_foco = f"Foco: Tabuada do {detalhe}"
@@ -365,105 +492,6 @@ def baixar_pdf():
     c.save()
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=f"exercicios_{current_user.username}.pdf", mimetype='application/pdf')
-
-# --- ROTAS FLASHCARDS ---
-
-@app.route('/iniciar_flashcards/<modo>')
-@login_required
-def iniciar_flashcards(modo):
-    session['modo'] = modo
-    session['score'] = 0
-    return redirect(url_for('nova_pergunta_flash'))
-
-@app.route('/nova_pergunta_flash')
-@login_required
-def nova_pergunta_flash():
-    # Reutiliza a lógica de gerar números (copie a lógica da nova_pergunta ou refatore se quiser)
-    # Para simplificar, vou repetir a lógica básica aqui:
-    op_modo = session.get('modo', 'todas')
-    operadores = ['+', '-', '*', '/']
-    op = op_modo if op_modo in ['+', '-', '*', '/'] else random.choice(operadores)
-    
-    num1, num2, resp = 0, 0, 0
-    if op == '/':
-        divisor = random.randint(2, 9)
-        resp = random.randint(2, 9)
-        num1 = divisor * resp
-        num2 = divisor
-    elif op == '*':
-        num1 = random.randint(2, 9)
-        num2 = random.randint(2, 9)
-        resp = num1 * num2
-    elif op == '-':
-        num1 = random.randint(1, 20)
-        num2 = random.randint(1, 20)
-        if num1 < num2: num1, num2 = num2, num1
-        resp = num1 - num2
-    else:
-        num1 = random.randint(1, 20)
-        num2 = random.randint(1, 20)
-        resp = num1 + num2
-
-    session['num1'] = num1
-    session['num2'] = num2
-    if op == '/': visual = '÷'
-    elif op == '*': visual = 'x'
-    else: visual = op
-    session['operador_visual'] = visual
-    session['resposta_correta'] = resp
-    
-    # GERA AS OPÇÕES AQUI
-    session['opcoes_flash'] = gerar_opcoes(resp)
-    
-    return redirect(url_for('jogo_flashcards'))
-
-@app.route('/jogo_flashcards', methods=['GET', 'POST'])
-@login_required
-def jogo_flashcards():
-    if 'opcoes_flash' not in session:
-        return redirect(url_for('nova_pergunta_flash'))
-
-    feedback = None
-    cor_feedback = ""
-    acertou = False
-    
-    if request.method == 'POST':
-        try:
-            resp_user = int(request.form.get('resposta'))
-            resp_real = session.get('resposta_correta')
-            acertou = (resp_user == resp_real)
-
-            # Salva no Banco (Reutiliza a mesma tabela!)
-            novo = Historico(
-                student_id=current_user.id,
-                operacao=session['operador_visual'],
-                conta=f"{session['num1']} {session['operador_visual']} {session['num2']}",
-                resposta_aluno=resp_user,
-                resposta_correta=resp_real,
-                acertou=acertou
-            )
-            db.session.add(novo)
-            db.session.commit()
-
-            if acertou:
-                session['score'] += 1
-                feedback = "ACERTOU! 🌟"
-                cor_feedback = "green"
-            else:
-                feedback = f"Ops! A certa era {resp_real}."
-                cor_feedback = "#D32F2F"
-        except:
-            pass
-
-    return render_template('flashcards.html', 
-                           num1=session['num1'], 
-                           num2=session['num2'], 
-                           operador=session['operador_visual'],
-                           score=session['score'],
-                           opcoes=session['opcoes_flash'], # Envia as 3 opções
-                           feedback=feedback,
-                           cor_feedback=cor_feedback,
-                           acertou=acertou)
 
 if __name__ == '__main__':
     app.run(debug=True)

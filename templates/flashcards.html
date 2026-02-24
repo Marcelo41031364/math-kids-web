@@ -13,7 +13,6 @@
         
         .pergunta { font-size: 4rem; color: #006064; margin: 20px 0; font-weight: bold; }
         
-        /* Container dos Botões de Opção */
         .opcoes-container {
             display: flex;
             flex-direction: column;
@@ -54,8 +53,11 @@
         <div class="score">⭐ {{ score }}</div>
     </div>
 
+    <!-- Exibição Inteligente (com parênteses para negativos) -->
     <div class="pergunta">
-        {{ num1 }} {{ operador }} {{ num2 }}
+        {% if num1 < 0 %}({{ num1 }}){% else %}{{ num1 }}{% endif %}
+        {{ operador }}
+        {% if num2 < 0 %}({{ num2 }}){% else %}{{ num2 }}{% endif %}
     </div>
 
     <div class="feedback-area">
@@ -65,7 +67,6 @@
         {% endif %}
     </div>
 
-    <!-- Só mostra as opções se ainda não respondeu -->
     {% if not feedback %}
     <form method="POST" action="/jogo_flashcards">
         <div class="opcoes-container">
