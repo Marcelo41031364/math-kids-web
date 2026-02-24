@@ -14,9 +14,24 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # --- CONFIGURAÇÃO DO BANCO ---
+#basedir = os.path.abspath(os.path.dirname(__file__))
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'mathkids.db')
+#app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+#db = SQLAlchemy(app)
+
+# --- CONFIGURAÇÃO DO BANCO (HÍBRIDO) ---
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'mathkids.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Tenta pegar a URL do banco nas variáveis de ambiente (Render)
+database_url = os.environ.get('DATABASE_URL')
+
+# Correção necessária: O Render entrega 'postgres://' mas o SQLAlchemy exige 'postgresql://'
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Se tiver URL (no Render), usa Postgres. Se não (no Mac), usa SQLite.
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.join(basedir, 'mathkids.db')
 
 db = SQLAlchemy(app)
 
