@@ -35,6 +35,23 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = "Por favor, faça login para acessar essa página."
 
+
+# --- BANCO DE PROBLEMAS DIVERTIDOS ---
+LISTA_PROBLEMAS = [
+    {"p": "O Pirata Barba-Ruiva tinha 10 moedas de ouro. Ele achou um baú com mais 5. Quantas moedas ele tem agora?", "r": 15, "op": "+"},
+    {"p": "Uma aranha tem 8 pernas. Quantas pernas têm 2 aranhas juntas?", "r": 16, "op": "x"},
+    {"p": "O Astronauta levou 12 sanduíches para a Lua. Ele comeu 4 na viagem. Quantos sobraram?", "r": 8, "op": "-"},
+    {"p": "A bruxa quer dividir 20 sapos igualmente em 4 caldeirões. Quantos sapos vão em cada caldeirão?", "r": 5, "op": "÷"},
+    {"p": "Quanto é: 2 + 2 x 3? (Lembre-se: multiplicação vem primeiro!)", "r": 8, "op": "x"},
+    {"p": "O Zumbi perdeu 3 dentes na segunda e 4 na terça. Quantos dentes ele perdeu ao todo?", "r": 7, "op": "+"},
+    {"p": "Se 1 gato tem 4 patas, quantas patas têm 5 gatos?", "r": 20, "op": "x"},
+    {"p": "Tenho 30 balas e quero dar 5 para cada amigo. Quantos amigos vão ganhar balas?", "r": 6, "op": "÷"},
+    {"p": "O Creeper estava no nível 15. Ele caiu 5 níveis. Em que nível ele está?", "r": 10, "op": "-"},
+    {"p": "Expressão maluca: 10 - 2 + 5 = ?", "r": 13, "op": "+"},
+    {"p": "O Vampiro dorme 10 horas por dia. Quantas horas ele dorme em 3 dias?", "r": 30, "op": "x"},
+    {"p": "Havia 12 pedaços de pizza. O cachorro comeu metade. Quantos sobraram?", "r": 6, "op": "÷"}
+]
+
 # --- MODELOS (TABELAS) ---
 
 class Student(UserMixin, db.Model):
@@ -68,6 +85,19 @@ with app.app_context():
     db.create_all()
 
 # --- FUNÇÕES AUXILIARES ---
+
+def gerar_4_opcoes(resposta_certa):
+    """Gera 4 opções: 1 certa e 3 erradas"""
+    opcoes = {resposta_certa}
+    while len(opcoes) < 4:
+        desvio = random.randint(-10, 10)
+        if desvio != 0:
+            errada = resposta_certa + desvio
+            if errada >= 0: # Evita negativos se a resposta for positiva
+                opcoes.add(errada)
+    lista = list(opcoes)
+    random.shuffle(lista) # Mistura tudo
+    return lista
 
 def gerar_opcoes(resposta_certa):
     """Gera 3 opções para o Flashcard (1 certa + 2 erradas)"""
@@ -492,6 +522,80 @@ def baixar_pdf():
     c.save()
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=f"exercicios_{current_user.username}.pdf", mimetype='application/pdf')
+
+# --- ROTAS MODO PROBLEMA ---
+
+@app.route('/iniciar_problema')
+@login_required
+def iniciar_problema():
+    session['modo'] = 'problema'
+    session['score'] = 0
+    return redirect(url_for('nova_pergunta_problema'))
+
+@app.route('/nova_pergunta_problema')
+@login_required
+def nova_pergunta_problema():
+    # Sorteia um problema da lista
+    problema = random.choice(LISTA_PROBLEMAS)
+    
+    session['texto_problema'] = problema['p']
+    session['resposta_correta'] = problema['r']
+    session['operador_visual'] = problema['op'] # Para salvar no histórico
+    
+    # Gera as 4 alternativas
+    session['opcoes_problema'] = gerar_4_opcoes(problema['r'])
+    
+    # Salva num1 e num2 como 0 apenas para não quebrar o histórico do banco
+    session['num1'] = 0
+    session['num2'] = 0
+    
+    return redirect(url_for('jogo_problema'))
+
+@app.route('/jogo_problema', methods=['GET', 'POST'])
+@login_required
+def jogo_problema():
+    if 'texto_problema' not in session:
+        return redirect(url_for('nova_pergunta_problema'))
+
+    feedback = None
+    cor_feedback = ""
+    acertou = False
+    
+    if request.method == 'POST':
+        try:
+            resp_user = int(request.form.get('resposta'))
+            resp_real = session.get('resposta_correta')
+            acertou = (resp_user == resp_real)
+
+            # Salva no histórico (A conta será o texto resumido ou "Problema")
+            novo = Historico(
+                student_id=current_user.id,
+                operacao='?', # Símbolo de problema
+                conta="Desafio Lógico", # Ou session['texto_problema'][:40]...
+                resposta_aluno=resp_user,
+                resposta_correta=resp_real,
+                acertou=acertou
+            )
+            db.session.add(novo)
+            db.session.commit()
+
+            if acertou:
+                session['score'] += 1
+                feedback = "RACIOCÍNIO BRILHANTE! 🧠"
+                cor_feedback = "green"
+            else:
+                feedback = f"Que pena! A resposta certa era {resp_real}."
+                cor_feedback = "#D32F2F"
+        except:
+            pass
+
+    return render_template('problema.html', 
+                           pergunta=session['texto_problema'], 
+                           score=session['score'],
+                           opcoes=session['opcoes_problema'],
+                           feedback=feedback,
+                           cor_feedback=cor_feedback,
+                           acertou=acertou)
 
 if __name__ == '__main__':
     app.run(debug=True)
