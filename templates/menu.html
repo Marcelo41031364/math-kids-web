@@ -5,23 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Kids Web</title>
     <style>
-        body { font-family: 'Comic Sans MS', sans-serif; background-color: #E0F7FA; text-align: center; padding: 20px; margin: 0; }
-        h1 { color: #006064; margin-bottom: 30px; }
-        .btn { display: block; width: 100%; max-width: 300px; margin: 15px auto; padding: 20px; font-size: 1.3rem; color: #263238; border: none; border-radius: 15px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 0px rgba(0,0,0,0.2); transition: transform 0.1s; }
-        .btn:active { transform: translateY(4px); box-shadow: none; }
-        .soma { background-color: #81D4FA; }
-        .sub { background-color: #EF9A9A; }
-        .mult { background-color: #FFCC80; }
-        .div { background-color: #CE93D8; }
-        .todas { background-color: #80CBC4; }
+        body { font-family: 'Comic Sans MS', sans-serif; background-color: #E0F7FA; text-align: center; padding: 10px; margin: 0; }
+        
+        h1 { color: #006064; margin: 10px 0 5px 0; font-size: 1.8rem; }
+        .welcome { color: #555; margin-bottom: 15px; font-size: 1rem; }
+        
+        /* Títulos das Seções */
+        .section-title { 
+            color: #0277BD; 
+            margin-top: 15px; 
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #B3E5FC; 
+            display: inline-block; 
+            padding: 0 15px; 
+        }
+
+        /* CONTAINER DO GRID (A Mágica acontece aqui) */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Duas colunas iguais */
+            gap: 10px; /* Espaço entre os botões */
+            max-width: 400px; /* Largura máxima para não esticar demais no PC */
+            margin: 0 auto; /* Centraliza o container */
+            padding: 0 10px;
+        }
+
+        /* Estilo dos Botões */
+        .btn { 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 5px; 
+            font-size: 1rem; 
+            color: #37474F; 
+            background: white;
+            border: none; 
+            border-radius: 10px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            box-shadow: 0 3px 0px rgba(0,0,0,0.1); 
+            transition: transform 0.1s; 
+            height: 50px; /* Altura fixa para ficarem iguais */
+        }
+        
+        .btn:active { transform: translateY(3px); box-shadow: none; }
+
+        /* Botão que ocupa a linha inteira (O último) */
+        .btn-full {
+            grid-column: span 2; /* Ocupa as 2 colunas */
+        }
+        
+        /* Cores (Borda Esquerda) */
+        .soma { border-left: 8px solid #42A5F5; }
+        .sub { border-left: 8px solid #EF5350; }
+        .mult { border-left: 8px solid #FFA726; }
+        .div { border-left: 8px solid #AB47BC; }
+        .todas { border-left: 8px solid #26A69A; background-color: #E0F2F1; }
+
+        /* Rodapé */
+        .footer-btns { margin-top: 25px; margin-bottom: 20px; }
+        
+        .btn-relatorio { 
+            background-color: #FFF59D; 
+            border: 2px dashed #FBC02D; 
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .btn-logout { 
+            color: #90A4AE; 
+            font-size: 0.9rem; 
+            text-decoration: none;
+            display: block; 
+        }
     </style>
 </head>
 <body>
-    <h1>O que vamos estudar? 🎓</h1>
-    <a href="/iniciar/+" class="btn soma">➕ Adição</a>
-    <a href="/iniciar/-" class="btn sub">➖ Subtração</a>
-    <a href="/iniciar/*" class="btn mult">✖️ Multiplicação</a>
-    <a href="/iniciar//" class="btn div">➗ Divisão</a>
-    <a href="/iniciar/todas" class="btn todas">🎲 Tudo Misturado</a>
+    <h1>Math Kids 🎓</h1>
+    <div class="welcome">Aluno: <strong>{{ nome }}</strong></div>
+
+    <!-- SEÇÃO 1: MODO CLÁSSICO -->
+    <div class="section-title">⌨️ Modo Clássico (Digitar)</div>
+    
+    <div class="grid-container">
+        <a href="/iniciar/+" class="btn soma">➕ Adição</a>
+        <a href="/iniciar/-" class="btn sub">➖ Subtração</a>
+        <a href="/iniciar/*" class="btn mult">✖️ Multiplicação</a>
+        <a href="/iniciar//" class="btn div">➗ Divisão</a>
+        <!-- Este botão ocupa a linha toda -->
+        <a href="/iniciar/todas" class="btn todas btn-full">🎲 Tudo Misturado</a>
+    </div>
+
+    <!-- SEÇÃO 2: MODO FLASHCARDS -->
+    <div class="section-title">⚡ Modo Flashcards (Clicar)</div>
+    
+    <div class="grid-container">
+        <a href="/iniciar_flashcards/+" class="btn soma">➕ Adição</a>
+        <a href="/iniciar_flashcards/-" class="btn sub">➖ Subtração</a>
+        <a href="/iniciar_flashcards/*" class="btn mult">✖️ Tabuada</a>
+        <a href="/iniciar_flashcards//" class="btn div">➗ Divisão</a>
+        <!-- Este botão ocupa a linha toda -->
+        <a href="/iniciar_flashcards/todas" class="btn todas btn-full">⚡ Desafio Rápido</a>
+    </div>
+
+    <!-- RODAPÉ -->
+    <div class="footer-btns">
+        <a href="/relatorio" class="btn-relatorio">📊 Ver Meu Relatório</a>
+        <br>
+        <a href="/logout" class="btn-logout">Sair / Trocar Aluno</a>
+    </div>
 </body>
 </html>

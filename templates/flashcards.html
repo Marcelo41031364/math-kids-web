@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards Math Kids</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #E0F7FA; text-align: center; padding: 10px; margin: 0; }
+        
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #B2EBF2; border-radius: 0 0 15px 15px; margin-bottom: 20px; }
+        .btn-voltar { background-color: #0097A7; color: white; padding: 8px 15px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        .score { font-size: 1.5rem; color: #F57F17; font-weight: bold; }
+        
+        .pergunta { font-size: 4rem; color: #006064; margin: 20px 0; font-weight: bold; }
+        
+        /* Container dos Botões de Opção */
+        .opcoes-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .btn-opcao {
+            background-color: white;
+            border: 3px solid #00BCD4;
+            color: #006064;
+            padding: 20px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            width: 100%;
+        }
+
+        .btn-opcao:hover { background-color: #E0F7FA; }
+        .btn-opcao:active { transform: scale(0.95); background-color: #B2EBF2; }
+
+        .feedback-area { margin-top: 20px; min-height: 60px; }
+        .msg-feedback { font-size: 2rem; font-weight: bold; display: block; margin-bottom: 15px;}
+        
+        .btn-proxima { 
+            background-color: #00C853; color: white; padding: 15px 40px; 
+            text-decoration: none; font-size: 1.5rem; border-radius: 10px; 
+            font-weight: bold; display: inline-block; box-shadow: 0 4px 0 #009624;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <a href="/" class="btn-voltar">⬅ Menu</a>
+        <div class="score">⭐ {{ score }}</div>
+    </div>
+
+    <div class="pergunta">
+        {{ num1 }} {{ operador }} {{ num2 }}
+    </div>
+
+    <div class="feedback-area">
+        {% if feedback %}
+            <span class="msg-feedback" style="color: {{ cor_feedback }}">{{ feedback }}</span>
+            <a href="/nova_pergunta_flash" class="btn-proxima">Próxima ➡</a>
+        {% endif %}
+    </div>
+
+    <!-- Só mostra as opções se ainda não respondeu -->
+    {% if not feedback %}
+    <form method="POST" action="/jogo_flashcards">
+        <div class="opcoes-container">
+            {% for opcao in opcoes %}
+                <button type="submit" name="resposta" value="{{ opcao }}" class="btn-opcao">
+                    {{ opcao }}
+                </button>
+            {% endfor %}
+        </div>
+    </form>
+    {% endif %}
+
+</body>
+</html>

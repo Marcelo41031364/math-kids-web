@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Inteligente</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #E0F7FA; padding: 20px; text-align: center; }
+        
+        /* Cards e Botões */
+        .card-analise { background-color: #FFF9C4; border: 2px solid #FBC02D; padding: 20px; border-radius: 10px; max-width: 800px; margin: 20px auto; }
+        .btn-pdf { background-color: #FF5722; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; margin-top: 10px; }
+        .btn-voltar { background-color: #0097A7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; float: left;}
+
+        /* Área de Filtros */
+        .filtros-container {
+            background: white;
+            padding: 15px;
+            max-width: 800px;
+            margin: 20px auto 0 auto;
+            border-radius: 10px 10px 0 0;
+            border-bottom: 2px solid #E0F7FA;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #006064;
+            font-size: 1rem;
+            color: #006064;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Tabela */
+        table { width: 100%; max-width: 800px; margin: 0 auto 50px auto; border-collapse: collapse; background: white; border-radius: 0 0 10px 10px; overflow: hidden; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; }
+        th { background-color: #006064; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        
+        .status-acertou { color: green; font-weight: bold; }
+        .status-errou { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="/" class="btn-voltar">⬅ Voltar</a>
+    <br><br>
+    <h1>Relatório de Desempenho 📊</h1>
+
+    <!-- ÁREA DA INTELIGÊNCIA -->
+    <div class="card-analise">
+        <h3>🤖 Análise do Professor Robô:</h3>
+        <p style="font-size: 1.2rem;">{{ mensagem_analise }}</p>
+        <a href="/baixar_pdf" class="btn-pdf">📄 Baixar Exercícios em PDF</a>
+    </div>
+
+    <!-- ÁREA DE FILTROS (NOVO) -->
+    <div class="filtros-container">
+        <select id="filtroOperacao" onchange="filtrarTabela()">
+            <option value="todos">Todas as Operações</option>
+            <option value="+">➕ Adição (+)</option>
+            <option value="-">➖ Subtração (-)</option>
+            <option value="x">✖ Multiplicação (x)</option>
+            <option value="÷">➗ Divisão (÷)</option>
+        </select>
+
+        <select id="filtroStatus" onchange="filtrarTabela()">
+            <option value="todos">Todos os Status</option>
+            <option value="acertou">✔ Apenas Acertos</option>
+            <option value="errou">✖ Apenas Erros</option>
+        </select>
+    </div>
+
+    <!-- TABELA DE DADOS -->
+    <table id="tabelaHistorico">
+        <thead>
+            <tr>
+                <th>Conta</th>
+                <th>Sua Resposta</th>
+                <th>Correta</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in historico %}
+            <tr class="linha-tabela" data-op="{{ item.operacao }}" data-status="{{ 'acertou' if item.acertou else 'errou' }}">
+                <td>{{ item.conta }}</td>
+                <td>{{ item.resposta_aluno }}</td>
+                <td>{{ item.resposta_correta }}</td>
+                <td>
+                    {% if item.acertou %}
+                        <span class="status-acertou">✔ Acertou</span>
+                    {% else %}
+                        <span class="status-errou">✖ Errou</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- SCRIPT DE FILTRAGEM (JAVASCRIPT) -->
+    <script>
+        function filtrarTabela() {
+            // 1. Pega os valores selecionados nos menus
+            var opSelecionada = document.getElementById("filtroOperacao").value;
+            var statusSelecionado = document.getElementById("filtroStatus").value;
+            
+            // 2. Pega todas as linhas da tabela
+            var linhas = document.getElementsByClassName("linha-tabela");
+
+            // 3. Passa linha por linha verificando se deve mostrar ou esconder
+            for (var i = 0; i < linhas.length; i++) {
+                var linha = linhas[i];
+                
+                // Pega os dados escondidos na linha (data-op e data-status)
+                var opLinha = linha.getAttribute("data-op");
+                var statusLinha = linha.getAttribute("data-status");
+
+                // Lógica de verificação
+                var mostrarOp = (opSelecionada === "todos") || (opLinha === opSelecionada);
+                var mostrarStatus = (statusSelecionado === "todos") || (statusLinha === statusSelecionado);
+
+                // Se atender aos dois filtros, mostra. Se não, esconde.
+                if (mostrarOp && mostrarStatus) {
+                    linha.style.display = ""; // Mostra
+                } else {
+                    linha.style.display = "none"; // Esconde
+                }
+            }
+        }
+    </script>
+</body>
+</html>

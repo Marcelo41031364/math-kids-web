@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar - Math Kids</title>
+    <style>
+        body { font-family: 'Comic Sans MS', sans-serif; background-color: #E0F7FA; text-align: center; padding: 40px; }
+        .box { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { width: 90%; padding: 15px; margin: 10px 0; border: 2px solid #00BCD4; border-radius: 8px; font-size: 1rem; }
+        button { width: 100%; padding: 15px; background: #00BCD4; color: white; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0097A7; }
+        a { color: #0097A7; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1 style="color:#006064">Math Kids 🎓</h1>
+        <h2>Entrar</h2>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <p style="color:red">{{ messages[0] }}</p>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <input type="text" name="username" placeholder="Usuário" required>
+            <input type="password" name="password" placeholder="Senha" required>
+            <button type="submit">JOGAR ▶</button>
+        </form>
+        <br>
+        <p>Não tem conta? <a href="/register">Cadastre-se aqui</a></p>
+    </div>
+</body>
+</html>
